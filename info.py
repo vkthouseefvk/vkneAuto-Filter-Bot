@@ -60,9 +60,9 @@ AUTH_CHANNEL = [int(ch) for ch in AUTH_CHANNEL.strip().split()] if AUTH_CHANNEL 
 AUTH_REQ_CHANNEL = environ.get('AUTH_REQ_CHANNEL', '') # add multiple channels here, separated by single space
 AUTH_REQ_CHANNEL = [int(ch) for ch in AUTH_REQ_CHANNEL.strip().split()] if AUTH_REQ_CHANNEL else []
 
-IS_VERIFY = is_enabled('IS_VERIFY', False)
-LOG_VR_CHANNEL = int(environ.get('LOG_VR_CHANNEL', '0'))
-LOG_API_CHANNEL = int(environ.get('LOG_API_CHANNEL', '0'))
+IS_VERIFY = is_enabled('IS_VERIFY', True)
+LOG_VR_CHANNEL = int(environ.get('LOG_VR_CHANNEL', '1001728230648'))
+LOG_API_CHANNEL = int(environ.get('LOG_API_CHANNEL', '1001728230648'))
 VERIFY_IMG = environ.get("VERIFY_IMG", "https://telegra.ph/file/9ecc5d6e4df5b83424896.jpg")
 
 TUTORIAL = environ.get("TUTORIAL", "")
@@ -106,7 +106,7 @@ MELCOW_NEW_USERS = is_enabled((environ.get('MELCOW_NEW_USERS', "False")), False)
 PROTECT_CONTENT = is_enabled((environ.get('PROTECT_CONTENT', "False")), True)
 PM_SEARCH = bool(environ.get('PM_SEARCH', True)) 
 EMOJI_MODE = bool(environ.get('EMOJI_MODE', False)) 
-PAID_STREAM = bool(environ.get('PAID_STREAM', False)) 
+PAID_STREAM = bool(environ.get('PAID_STREAM', True)) 
 
 LANGUAGES = ["malayalam", "", "tamil", "", "english", "", "hindi", "", "telugu", "", "kannada", "", "gujarati", "", "marathi", "", "punjabi", ""]
 QUALITIES = ["360P", "", "480P", "", "720P", "", "1080P", "", "1440P", "", "2160P", ""]
