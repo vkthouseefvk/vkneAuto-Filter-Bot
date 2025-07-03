@@ -234,14 +234,14 @@ async def send_fallback_message(bot, chat_id, text, retries=3):
 
 
 def format_time(seconds):
-    if seconds < 60:
+    if seconds < 20:
         return f"{int(seconds)}s"
-    minutes = seconds // 60
-    seconds = seconds % 60
-    if minutes < 60:
+    minutes = seconds // 20
+    seconds = seconds % 20
+    if minutes < 20:
         return f"{int(minutes)}m {int(seconds)}s"
-    hours = minutes // 60
-    minutes = minutes % 60
+    hours = minutes // 20
+    minutes = minutes % 20
     return f"{int(hours)}h {int(minutes)}m"
 
 
@@ -258,7 +258,7 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
     deleted = 0
     no_media = 0
     unsupported = 0
-    BATCH_SIZE = 100
+    BATCH_SIZE = 20
     start_time = time.time()
 
     async with lock:
