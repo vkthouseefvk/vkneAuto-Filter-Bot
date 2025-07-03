@@ -112,7 +112,7 @@ LANGUAGES = ["malayalam", "", "tamil", "", "english", "", "hindi", "", "telugu",
 QUALITIES = ["360P", "", "480P", "", "720P", "", "1080P", "", "1440P", "", "2160P", ""]
 SEASONS = ["s01" , "s02" , "s03" , "s04", "s05" , "s06" , "s07" , "s08" , "s09" , "s10"]
 
-STREAM_MODE = bool(environ.get('STREAM_MODE', False))
+STREAM_MODE = bool(environ.get('STREAM_MODE', True))
 
 NO_PORT = bool(environ.get('NO_PORT', False))
 APP_NAME = None
