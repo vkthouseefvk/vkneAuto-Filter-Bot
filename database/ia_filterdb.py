@@ -11,14 +11,18 @@ from marshmallow.exceptions import ValidationError
 from info import *
 from utils import get_settings, save_group_settings
 from collections import defaultdict
-
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 processed_movies = set()
 
-MONGODB_SIZE_LIMIT = (512 * 1024 * 1024) - (80 * 1024 * 1024) 
+_db_stats_cache = {
+    "timestamp": None,  
+    "primary_size": 0   
+}
+
 
 client = AsyncIOMotorClient(DATABASE_URI)
 db = client[DATABASE_NAME]
@@ -57,47 +61,66 @@ class Media2(Document):
 
 async def check_db_size(db):
     try:
+        now = datetime.utcnow()
+        if _db_stats_cache["timestamp"] is None or (now - _db_stats_cache["timestamp"] > timedelta(minutes=10)):
+            pass  
+        elif _db_stats_cache["primary_size"] >= (512 - 80):  # 432MB 
+            pass  
+        else:
+            print(f"📊 DB Size (cached): {_db_stats_cache['primary_size']:.2f} MB")
+            return _db_stats_cache["primary_size"]
         stats = await db.command("dbstats")
-        return stats["dataSize"]
+        db_size = stats["dataSize"]
+        db_size_mb = db_size / (1024 * 1024) 
+        _db_stats_cache["primary_size"] = db_size_mb
+        _db_stats_cache["timestamp"] = now
+        print(f"📊 DB Size (updated): {db_size_mb:.2f} MB")
+        return db_size_mb
     except Exception as e:
-        logger.error(f"Database size check error: {e}")
+        print(f"Error Checking Database Size: {e}")
         return 0
          
-async def save_file(bot, media):
-    try:
-        file_id, file_ref = unpack_new_file_id(media.file_id)
-        file_name = re.sub(r"[^\w\s.-]", " ", str(media.file_name)).strip()       
-        if await Media.count_documents({'file_id': file_id}, limit=1):
-            print(f'{file_name} exists in primary DB')
+async def save_file(media):
+    file_id, file_ref = unpack_new_file_id(media.file_id)
+    file_name = re.sub(r"@\w+|(_|\-|\.|\+|\#|\$|%|\^|&|\*|\(|\)|!|~|`|,|;|:|\"|\'|\?|/|<|>|\[|\]|\{|\}|=|\||\\)", " ", str(media.file_name))
+    file_name = re.sub(r"\s+", " ", file_name)  
+    saveMedia = Media
+    if MULTIPLE_DB:
+        exists = await Media.count_documents({'file_id': file_id}, limit=1)
+        if exists:
+            logger.warning(f'{file_name} Is Already Saved In Primary Database!')
             return False, 0
-        target_db = Media
-        if MULTIPLE_DB:
-            primary_size = await check_db_size(db)
-            if primary_size >= MONGODB_SIZE_LIMIT:
-                print("Using secondary database")
-                target_db = Media2
-                if await Media2.count_documents({'file_id': file_id}, limit=1):
-                    print(f'{file_name} exists in secondary DB')
-                    return False, 0
         try:
-            file = target_db(
-                file_id=file_id,
-                file_ref=file_ref,
-                file_name=file_name,
-                file_size=media.file_size,
-                file_type=media.file_type,
-                mime_type=media.mime_type,
-                caption=media.caption.html if media.caption else None,
-            )
-            await file.commit()
-            print(f'Saved to {target_db.__name__}: {file_name}')
-            return True, 1
-        except DuplicateKeyError:
-            print(f'Duplicate file: {file_name}')
-            return False, 0
-    except Exception as e:
-        print(f'Save error: {e}')
+            primary_db_size = await check_db_size(db)
+            if primary_db_size >= 432:  # 512 - 80 MB left
+                print("Primary Database Is Low On Space. Switching To Secondary Db.")
+                saveMedia = Media2
+        except Exception as e:
+            print(f"Error Checking Primary DB Size: {e}")
+            saveMedia = Media
+    try:
+        file = saveMedia(
+            file_id=file_id,
+            file_ref=file_ref,
+            file_name=file_name,
+            file_size=media.file_size,
+            file_type=media.file_type,
+            mime_type=media.mime_type,
+            caption=media.caption.html if media.caption else None,
+        )
+    except ValidationError as e:
+        print(f'Validation Error While Saving File: {e}')
         return False, 2
+    else:
+        try:
+            await file.commit()
+        except DuplicateKeyError:
+            print(f'{file_name} Is Already Saved In Selected Database')
+            return False, 0
+        else:
+            print(f'{file_name} Saved Successfully In {"Secondary" if saveMedia==Media2 else "Primary"} Database')
+            return True, 1
+            
 
 async def get_search_results(chat_id, query, file_type=None, max_results=10, offset=0, filter=False):
     if chat_id is not None:
