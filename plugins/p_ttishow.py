@@ -3,7 +3,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQ
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid
 from info import *
 from database.users_chats_db import db, db2
-from database.ia_filterdb import Media, Media2
+from database.ia_filterdb import Media, Media2, db as db_stats, db2 as db2_stats
 from utils import get_size, temp, get_settings, get_readable_time
 from Script import script
 from pyrogram.errors import ChatAdminRequired
@@ -166,25 +166,24 @@ async def get_stats(bot, message):
         totl_chats = await db.total_chat_count()
         premium = await db.all_premium_users()
         file1 = await Media.count_documents()
-        size = await db.get_db_size()
-        free = 536870912 - size
-        size = get_size(size)
-        free = get_size(free)
+        DB_SIZE = 512 * 1024 * 1024
+        dbstats = await db_stats.command("dbStats")
+        db_size = dbstats['dataSize'] + dbstats['indexSize']
+        free = DB_SIZE - db_size
         uptime = get_readable_time(time() - botStartTime)
         ram = psutil.virtual_memory().percent
         cpu = psutil.cpu_percent()
         if MULTIPLE_DB == False:
             await SilentXBotz.edit(script.STATUS_TXT.format(
-                total_users, totl_chats, premium, file1, size, free, uptime, ram, cpu))                                               
+                total_users, totl_chats, premium, file1, get_size(db_size), get_size(free), uptime, ram, cpu))                                               
             return
         file2 = await Media2.count_documents()
-        size2 = await db2.get_db_size()
-        free2 = 536870912 - size2  
-        size2 = get_size(size2)
-        free2 = get_size(free2)
+        db2stats = await db2_stats.command("dbStats")
+        db2_size = db2stats['dataSize'] + db2stats['indexSize']
+        free2 = DB_SIZE - db2_size
         await SilentXBotz.edit(script.MULTI_STATUS_TXT.format(
-            total_users, totl_chats, premium, file1, size, free,
-            file2, size2, free2, uptime, ram, cpu, (int(file1) + int(file2))
+            total_users, totl_chats, premium, file1, get_size(db_size), get_size(free),
+            file2, get_size(db2_size), get_size(free2), uptime, ram, cpu, (int(file1) + int(file2))
         ))
     except Exception as e:
         print(e)
